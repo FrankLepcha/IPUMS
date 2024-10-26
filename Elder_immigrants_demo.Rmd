@@ -1,0 +1,323 @@
+---
+title: "Demographic and Employment Trends Among Elderly U.S. Immigrant Populations"
+output: html_notebook
+---
+
+## Library packages
+
+```{r}
+# ipsumr packages for reading ddi and modifying the dataset
+# dplyr for data manipulation 
+library(ggplot2)
+library(ipumsr)
+library(dplyr)
+library(haven) 
+```
+
+# Loading Data
+
+```{r}
+# Example data
+# reading data
+ddi <- read_ipums_ddi("highered_00001.xml")
+data <- read_ipums_micro(ddi)
+```
+
+```{r}
+#Variables within the data set
+ddi$var_info
+```
+
+# BTHUS indicates wether an observation was born in US or not
+
+```{r}
+ipums_val_labels(ddi, BTHUS)
+# 0 is observations not born in United States
+# 1 is observations in born in United States
+# 99 is observations is neither not defined or unnamed
+```
+
+# LFSAT is the Labor Force Status
+
+```{r}
+ipums_val_labels(ddi, LFSTAT)
+#1 is indicating employed
+#2 is indicating unepmloyed
+#3 is not in the labor force
+```
+
+# 
+
+```{r}
+ipums_var_desc(ddi, AGE)
+ipums_var_desc(ddi, GENDER)
+ipums_val_labels(ddi, GENDER)
+ipums_val_labels(ddi, RACETH)
+ipums_var_desc(ddi, DGRDG)
+ipums_val_labels(ddi, DGRDG)
+```
+
+# Analyzing elder immigrrants(60 and above)
+
+```{r}
+# Filter for elder immigrants (age >= 60 and not born in the U.S.)
+elder_immigrants1 <- data %>%
+  filter(AGE >= 60, BTHUS != 1)  # Adjust "United States" based on how it's encoded
+
+```
+
+```{r}
+head(elder_immigrants1)
+```
+
+```{r}
+# Summarize labor force status
+work_status_summary <- elder_immigrants1 %>%
+  group_by(LFSTAT) %>%
+  summarize(count = n())  # Count number of individuals in each labor force status category
+
+# View the summary
+print(work_status_summary)
+
+#LFSTAT
+# 1/ Employed
+# 2/ Umeployed
+# 3/ Not in the labor force
+
+```
+
+```{r}
+#Summarize labor work force status for the elder_immigrants2
+
+work_status_summary2 <- elder_immigrants2 %>% group_by(LFSTAT) %>%
+summarize(count = n())
+
+
+print(work_status_summary2)
+
+#1 is Employed
+#2 is Umeployed
+#3 is Not in Work Force
+```
+
+```{r}
+#duplicate
+#Summarize labor work force status for the elder_immigrants2
+
+work_status_summary <- elder_immigrants1 %>% group_by(LFSTAT) %>%
+summarize(count = n())
+
+
+print(work_status_summary)
+
+#1 is Employed
+#2 is Umemployed
+#3 is Not in Work Force
+```
+
+```{r}
+# Convert LFSTAT to a factor
+elder_immigrants2 <- elder_immigrants2 %>%
+  mutate(LFSTAT = as_factor(LFSTAT))
+
+# Check the unique values of LFSTAT after conversion
+unique(elder_immigrants$LFSTAT)
+```
+
+```{r}
+# Summarize labor force status using the original numeric values
+work_status_summary2 <- elder_immigrants2 %>%
+  group_by(LFSTAT) %>%
+  summarize(count = n(), .groups = 'drop')
+
+# View the summary
+print(work_status_summary)
+
+```
+
+```{r}
+# Bar plot of labor force status distribution using numeric values
+ggplot(work_status_summary, aes(x = factor(LFSTAT, levels = c(1, 2, 3)), y = count, fill = factor(LFSTAT))) +
+  geom_bar(stat = "identity") +
+  scale_x_discrete(labels = c("1" = "Employed", "2" = "Unemployed", "3" = "Not in the labor force")) +
+  labs(title = "Labor Force Status of Elder Immigrants", x = "Labor Force Status", y = "Count") +
+  theme_minimal()
+
+```
+
+```{r}
+
+```
+
+### Elderly Workforce by Gender
+
+```{r}
+# Summarize labor force status by gender
+work_status_by_gender <- elder_immigrants1 %>%
+  group_by(GENDER, LFSTAT) %>%
+  summarize(count = n())
+
+#print(work_status_by_gender)
+
+
+# Recode GENDER directly in the ggplot call
+ggplot(work_status_by_gender, aes(x = factor(LFSTAT, levels = c("1", "2", "3")), 
+                                  y = count, 
+                                  fill = factor(GENDER, labels = c("Female", "Male")))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_x_discrete(labels = c("1" = "Employed", "2" = "Unemployed", "3" = "Not in the labor force")) +
+  labs(title = "Labor Force Status of Elder Immigrants by Gender", 
+       x = "Labor Force Status", 
+       y = "Count", 
+       fill = "Gender") +
+  theme_minimal()
+```
+
+# As the graph shows, male elder immigrants are four times more likely to be in the workforce than female elder immigrants.
+
+### Analyzing race/ethnicity impact on the labor force
+
+```{r}
+# Summarize labor force status by race/ethnicity
+work_status_by_race <- elder_immigrants1 %>%
+  group_by(RACETH, LFSTAT) %>%
+  summarize(count = n(), .groups = 'drop')
+```
+
+```{r}
+# Check unique values for RACETH 
+unique(work_status_by_race$RACETH)
+
+
+```
+
+```{r}
+# Recode RACETH as a factor with specified labels
+work_status_by_race <- work_status_by_race %>%
+  mutate(RACETH = factor(RACETH, levels = c(1, 2, 3, 4),
+                         labels = c("Asian", "White", "Under-represented minorities", "Other")))
+
+# Plot with the RACETH
+ggplot(work_status_by_race, aes(x = factor(LFSTAT, levels = c("1", "2", "3")), 
+                                y = count, 
+                                fill = RACETH)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_x_discrete(labels = c("1" = "Employed", "2" = "Unemployed", "3" = "Not in the labor force")) +
+  labs(title = "Labor Force Status of Elder Immigrants by Race", 
+       x = "Labor Force Status", 
+       y = "Count", 
+       fill = "Race/Ethnicity") +
+  theme_minimal()
+
+```
+
+# Asian elder immigrants may have higher labor force participation compared to under-represented minorities in your dataset.
+
+# \* The racial/ethnic variables in the dataset lacked more definitive categories, making it impossible to differentiate between Hispanic, Black, or mixed groups.
+
+### #Educational Attainment impact on labor forrce
+
+```{r}
+elder_immigrants1 <- elder_immigrants1 %>%
+  mutate(DGRDG = recode(DGRDG, 
+                        `1` = "Bachelor's", 
+                        `2` = "Master's", 
+                        `3` = "Doctorate", 
+                        `4` = "Professional"))
+```
+
+```{r}
+# Summarize labor force status by education level
+work_status_by_education <- elder_immigrants1 %>%
+  group_by(DGRDG, LFSTAT) %>%
+  summarize(count = n())
+```
+
+```{r}
+head(work_status_by_education)
+
+ipums_var_desc(ddi, DGRDG)
+ipums_val_labels(ddi, DGRDG)
+
+#1 = Bachelors
+#2 = Masters
+#3 = Doctorate
+#4 = Professional 
+
+```
+
+```{r}
+ggplot(work_status_by_education, 
+       aes(x = recode(as_factor(DGRDG), 
+                      "1" = "Bachelor's", 
+                      "2" = "Master's", 
+                      "3" = "Doctorate", 
+                      "4" = "Professional"), 
+           y = count, 
+           fill = recode(as_factor(LFSTAT), 
+                         "1" = "Employed", 
+                         "2" = "Unemployed", 
+                         "3" = "Not in the Labor Force"))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Labor Force Status of Elder Immigrants by Education Level", 
+       x = "Highest Degree", 
+       y = "Count", 
+       fill = "Labor Force Status") +  # Add a legend title for clarity
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+# Elder immigrants worker who have Doctorates seems to be the biggest group in the data
+
+```{r}
+# Summarize labor force status by age groups
+work_status_by_age <- elder_immigrants1 %>%
+  group_by(cut(AGE, breaks = seq(65, 100, by = 5)), LFSTAT) %>%
+  summarize(count = n())
+```
+
+```{r}
+head(work_status_by_age)
+```
+
+## Overview on immigrants workers from age of 30 to 50
+
+```{r}
+#Making a new data set for observation from 50 and under, and not born in the US.
+
+demo <- data %>%
+  filter(AGE <= 50,BTHUS != 1 )
+```
+
+```{r}
+# Summarize labor force status by age group, now including 30 to 50
+work_status_by_age_30_to_50 <- demo %>%
+  filter(AGE >= 30 ) %>%  # Filtering for ages 30 and above
+  mutate(age_group = cut(AGE, breaks = seq(30, 50, by = 5))) %>%
+  group_by(age_group, LFSTAT) %>%
+  summarize(count = n())
+
+# View the summary to verify counts by age group and labor force status
+print(work_status_by_age_30_to_50)
+
+```
+
+```{r}
+ggplot(work_status_by_age_30_to_50, aes(x = age_group, 
+                               y = count, 
+                               fill = factor(LFSTAT, 
+                                             levels = c("1", "2", "3"), 
+                                             labels = c("Employed", "Unemployed", "Not in Labor Force")))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Labor Force Status by Age Group (50 and Below) for Immigrrants", 
+       x = "Age Group", 
+       y = "Count", 
+       fill = "Labor Force Status") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+# Majority of immigrant from age 50 and below are employed.
